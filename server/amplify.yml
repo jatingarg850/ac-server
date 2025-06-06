@@ -3,7 +3,7 @@ backend:
   phases:
     preBuild:
       commands:
-        - npm ci
+        - npm install
         - npm audit fix
     build:
       commands:
@@ -20,7 +20,7 @@ frontend:
     preBuild:
       commands:
         - cd client
-        - npm ci
+        - npm install
     build:
       commands:
         - npm run build
