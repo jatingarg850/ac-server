@@ -1,0 +1,25 @@
+version: 1
+backend:
+  phases:
+    preBuild:
+      commands:
+        - npm ci
+        - node verify-build.js
+    build:
+      commands:
+        - npm run build
+    postBuild:
+      commands:
+        - npm prune --production
+  artifacts:
+    baseDirectory: .
+    files:
+      - '**/*'
+    excludes:
+      - node_modules/**/*.md
+      - node_modules/**/*.txt
+      - node_modules/**/test/*
+      - node_modules/**/tests/*
+  cache:
+    paths:
+      - node_modules/**/* 
