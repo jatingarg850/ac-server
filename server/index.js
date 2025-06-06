@@ -15,8 +15,9 @@ const PORT = process.env.PORT || 5000;
 // Middleware
 const allowedOrigins = [
   'http://localhost:5173',
-  process.env.FRONTEND_URL,
-  'http://localhost:3000'
+  'http://localhost:3000',
+  'https://main.d1tkkow9h155jh.amplifyapp.com',
+  process.env.FRONTEND_URL
 ];
 
 app.use(cors({
@@ -24,9 +25,11 @@ app.use(cors({
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     if (allowedOrigins.indexOf(origin) === -1) {
+      console.log('Blocked origin:', origin); // Add logging for debugging
       const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
       return callback(new Error(msg), false);
     }
+    console.log('Allowed origin:', origin); // Add logging for debugging
     return callback(null, true);
   },
   credentials: true,
