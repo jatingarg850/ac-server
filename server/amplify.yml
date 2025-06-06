@@ -3,7 +3,8 @@ backend:
   phases:
     preBuild:
       commands:
-        - npm install
+        - npm ci
+        - npm audit fix
     build:
       commands:
         - npm run build
@@ -14,20 +15,19 @@ backend:
   cache:
     paths:
       - node_modules/**/*
-  - appRoot: client
-    backend:
-      phases:
-        preBuild:
-          commands:
-            - cd ../client
-            - npm ci
-        build:
-          commands:
-            - npm run build
-      artifacts:
-        baseDirectory: ../client/dist
-        files:
-          - '**/*'
-      cache:
-        paths:
-          - ../client/node_modules/**/* 
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - cd client
+        - npm ci
+    build:
+      commands:
+        - npm run build
+  artifacts:
+    baseDirectory: client/dist
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - client/node_modules/**/* 
