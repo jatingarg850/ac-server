@@ -1,33 +1,36 @@
 version: 1
-backend:
-  phases:
-    preBuild:
-      commands:
-        - npm install
-        - npm audit fix
-    build:
-      commands:
-        - npm run build
-  artifacts:
-    baseDirectory: /
-    files:
-      - '**/*'
-  cache:
-    paths:
-      - node_modules/**/*
-frontend:
-  phases:
-    preBuild:
-      commands:
-        - cd client
-        - npm install
-    build:
-      commands:
-        - npm run build
-  artifacts:
-    baseDirectory: client/dist
-    files:
-      - '**/*'
-  cache:
-    paths:
-      - client/node_modules/**/* 
+applications:
+  - appRoot: server
+    backend:
+      phases:
+        preBuild:
+          commands:
+            - npm install
+            - npm audit fix --force
+        build:
+          commands:
+            - npm run build
+      artifacts:
+        baseDirectory: /
+        files:
+          - '**/*'
+      cache:
+        paths:
+          - node_modules/**/*
+  - appRoot: client
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - npm install
+            - npm audit fix --force
+        build:
+          commands:
+            - npm run build
+      artifacts:
+        baseDirectory: dist
+        files:
+          - '**/*'
+      cache:
+        paths:
+          - node_modules/**/* 
