@@ -24,14 +24,7 @@ backend:
   artifacts:
     baseDirectory: .
     files:
-      - package.json
-      - package-lock.json
-      - ecosystem.config.cjs
-      - index.js
-      - routes/**/*
-      - middleware/**/*
-      - db/**/*
-      - config/**/*
+      - '**/*'
     excludes:
       - src/**/*
       - public/**/*
@@ -42,15 +35,17 @@ backend:
   customHeaders:
     - pattern: '**/*'
       headers:
-        - key: 'X-Frame-Options'
-          value: 'SAMEORIGIN'
-        - key: 'X-XSS-Protection'
-          value: '1; mode=block'
+        - key: 'Access-Control-Allow-Origin'
+          value: '*'
+        - key: 'Access-Control-Allow-Headers'
+          value: 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'
+        - key: 'Access-Control-Allow-Methods'
+          value: 'GET,POST,PUT,DELETE,OPTIONS'
   rewrites:
-    - source: '/api/:path*'
-      target: 'http://localhost:8080/api/:path*'
+    - source: '/api/*'
+      target: '/api/:splat'
       status: '200'
-    - source: '/<*>'
+    - source: '/*'
       target: '/index.html'
       status: '200'
 frontend:
@@ -64,4 +59,11 @@ frontend:
   artifacts:
     baseDirectory: /
     files:
-      - '**/*' 
+      - '**/*'
+  customHeaders:
+    - pattern: '**/*'
+      headers:
+        - key: 'Cache-Control'
+          value: 'no-store'
+        - key: 'Access-Control-Allow-Origin'
+          value: '*' 
