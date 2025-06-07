@@ -9,7 +9,7 @@ const __dirname = dirname(__filename);
 const requiredFiles = [
   'index.js',
   'package.json',
-  'ecosystem.config.js',
+  'ecosystem.config.cjs',
   'db/index.js',
   'routes/ac-listings.js',
   'routes/users.js',
