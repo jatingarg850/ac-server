@@ -8,31 +8,31 @@ backend:
   phases:
     preBuild:
       commands:
-        - echo "Current directory: $(pwd)"
-        - echo "Directory contents: $(ls -la)"
+        - 'echo "Current directory: $PWD"'
+        - 'echo "Directory contents:" && ls -la'
         - npm install
         - npm install -g pm2
-        - echo "Verifying build configuration..."
+        - 'echo "Verifying build configuration..."'
         - node verify-build.js
     build:
       commands:
-        - echo "Starting build phase..."
+        - 'echo "Starting build phase..."'
         - npm run build
-        - echo "Build phase completed"
+        - 'echo "Build phase completed"'
     postBuild:
       commands:
-        - echo "Starting PM2..."
-        - pm2 delete all || true
-        - pm2 start ecosystem.config.cjs --env production
-        - sleep 10
-        - echo "PM2 Status:"
+        - 'echo "Starting PM2..."'
+        - 'pm2 delete all || true'
+        - 'pm2 start ecosystem.config.cjs --env production'
+        - 'sleep 10'
+        - 'echo "PM2 Status:"'
         - pm2 list
-        - echo "PM2 Logs:"
-        - pm2 logs --nostream --lines 100
-        - echo "Testing health endpoint..."
-        - curl -v http://localhost:8080/health
-        - echo "Testing API endpoint..."
-        - curl -v http://localhost:8080/api/ac-listings
+        - 'echo "PM2 Logs:"'
+        - 'pm2 logs --nostream --lines 100'
+        - 'echo "Testing health endpoint..."'
+        - 'curl -v "http://localhost:8080/health"'
+        - 'echo "Testing API endpoint..."'
+        - 'curl -v "http://localhost:8080/api/ac-listings"'
   artifacts:
     baseDirectory: .
     files:
@@ -74,10 +74,10 @@ frontend:
   phases:
     preBuild:
       commands:
-        - echo "No frontend build required"
+        - 'echo "No frontend build required"'
     build:
       commands:
-        - echo "This is a backend-only application"
+        - 'echo "This is a backend-only application"'
   artifacts:
     baseDirectory: /
     files:
