@@ -24,6 +24,7 @@ const corsOptions = {
     // In production, check against allowed origins
     const allowedOrigins = [
       process.env.FRONTEND_URL,
+      'https://main.d2y8shqm3cc5e3.amplifyapp.com',
       'https://main.d1whkm3x8y08ei.amplifyapp.com',
       'https://main.d1tkkow9h155jh.amplifyapp.com'
     ].filter(Boolean);
