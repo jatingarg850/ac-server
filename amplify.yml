@@ -8,29 +8,48 @@ backend:
   phases:
     preBuild:
       commands:
+        - echo "Current directory: $(pwd)"
+        - echo "Directory contents: $(ls -la)"
         - npm install
         - npm install -g pm2
+        - echo "Verifying build configuration..."
         - node verify-build.js
     build:
       commands:
+        - echo "Starting build phase..."
         - npm run build
+        - echo "Build phase completed"
     postBuild:
       commands:
+        - echo "Starting PM2..."
         - pm2 delete all || true
         - pm2 start ecosystem.config.cjs --env production
         - sleep 10
+        - echo "PM2 Status:"
         - pm2 list
+        - echo "PM2 Logs:"
         - pm2 logs --nostream --lines 100
-        - curl -v http://localhost:8080/health || pm2 logs --nostream --lines 100
-        - curl -v http://localhost:8080/api/ac-listings || pm2 logs --nostream --lines 100
+        - echo "Testing health endpoint..."
+        - curl -v http://localhost:8080/health
+        - echo "Testing API endpoint..."
+        - curl -v http://localhost:8080/api/ac-listings
   artifacts:
     baseDirectory: .
     files:
-      - '**/*'
+      - index.js
+      - package.json
+      - package-lock.json
+      - ecosystem.config.cjs
+      - routes/**/*
+      - middleware/**/*
+      - db/**/*
+      - config/**/*
     excludes:
+      - node_modules/**/*
       - src/**/*
       - public/**/*
-      - node_modules/**/*
+      - '**/*.md'
+      - '**/*.test.js'
   cache:
     paths:
       - node_modules/**/*

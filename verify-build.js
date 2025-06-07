@@ -1,46 +1,56 @@
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import fs from 'fs/promises';
+import fs from 'fs';
+import path from 'path';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+console.log('Verifying build configuration...');
+console.log('Current directory:', process.cwd());
 
-// Check if all required files exist
 const requiredFiles = [
   'index.js',
-  'package.json',
   'ecosystem.config.cjs',
-  'db/index.js',
+  'package.json',
+  'package-lock.json',
   'routes/ac-listings.js',
   'routes/users.js',
+  'db/index.js',
   'middleware/auth.js'
 ];
 
-console.log('Verifying build configuration...');
-console.log('Current directory:', __dirname);
+const errors = [];
 
+requiredFiles.forEach(file => {
+  console.log(`Checking for ${file}...`);
+  try {
+    const stats = fs.statSync(path.join(process.cwd(), file));
+    console.log(`✓ Found: ${file} (${stats.size} bytes)`);
+  } catch (err) {
+    console.error(`✗ Missing: ${file}`);
+    errors.push(`Missing required file: ${file}`);
+  }
+});
+
+// Check ecosystem.config.cjs content
 try {
-  let allFilesExist = true;
-  for (const file of requiredFiles) {
-    const filePath = join(__dirname, file);
-    try {
-      await fs.access(filePath);
-      console.log(`✓ Found: ${file}`);
-    } catch (err) {
-      console.error(`✗ Missing required file: ${file}`);
-      console.error(`  Tried path: ${filePath}`);
-      allFilesExist = false;
-    }
-  }
-
-  if (allFilesExist) {
-    console.log('✓ All required files are present.');
-    process.exit(0);
-  } else {
-    console.error('✗ Build verification failed: Missing required files');
-    process.exit(1);
-  }
+  const ecosystemConfig = fs.readFileSync(path.join(process.cwd(), 'ecosystem.config.cjs'), 'utf8');
+  console.log('Ecosystem config content:', ecosystemConfig);
 } catch (err) {
-  console.error('✗ Build verification failed with error:', err);
+  console.error('Error reading ecosystem.config.cjs:', err);
+  errors.push('Error reading ecosystem.config.cjs');
+}
+
+// Check if routes directory exists and is accessible
+try {
+  const routesDir = fs.readdirSync(path.join(process.cwd(), 'routes'));
+  console.log('Routes directory contents:', routesDir);
+} catch (err) {
+  console.error('Error accessing routes directory:', err);
+  errors.push('Error accessing routes directory');
+}
+
+if (errors.length > 0) {
+  console.error('\nBuild verification failed:');
+  errors.forEach(error => console.error(`- ${error}`));
   process.exit(1);
+} else {
+  console.log('\nBuild verification successful!');
+  process.exit(0);
 } 
