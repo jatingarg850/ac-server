@@ -6,39 +6,32 @@ import jwt from 'jsonwebtoken';
 import { pool } from './db/index.js';
 import userRoutes from './routes/users.js';
 import acListingRoutes from './routes/ac-listings.js';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
 // Load environment variables
 dotenv.config();
-
-// Get production config
-const isProduction = process.env.NODE_ENV === 'production';
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
 // CORS configuration
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:3000',
-  'https://main.d1tkkow9h155jh.amplifyapp.com',
-  process.env.FRONTEND_URL
-].filter(Boolean);
-
 const corsOptions = {
   origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) === -1) {
-      console.log('Blocked origin:', origin);
-      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-      return callback(new Error(msg), false);
+    // In development, allow all origins
+    if (process.env.NODE_ENV === 'development') {
+      return callback(null, true);
     }
-    console.log('Allowed origin:', origin);
-    return callback(null, true);
+    
+    // In production, check against allowed origins
+    const allowedOrigins = [
+      process.env.FRONTEND_URL,
+      'https://main.d1tkkow9h155jh.amplifyapp.com'
+    ].filter(Boolean);
+
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -52,7 +45,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok' });
+  res.status(200).json({ status: 'ok', environment: process.env.NODE_ENV || 'development' });
 });
 
 // Test database connection
@@ -185,20 +178,6 @@ app.post('/api/auth/signup', async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
-
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ message: 'Something broke!' });
-});
-
-// Serve static files in production
-if (isProduction) {
-  app.use(express.static(path.join(__dirname, '../dist')));
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../dist/index.html'));
-  });
-}
 
 // Global error handling middleware
 app.use((err, req, res, next) => {
