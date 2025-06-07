@@ -11,13 +11,31 @@ import acListingRoutes from './routes/ac-listings.js';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 8080;
+
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  console.log('Headers:', JSON.stringify(req.headers, null, 2));
+  console.log('Query:', JSON.stringify(req.query, null, 2));
+  console.log('Body:', JSON.stringify(req.body, null, 2));
+  
+  // Log response
+  const originalSend = res.send;
+  res.send = function (data) {
+    console.log('Response:', data);
+    return originalSend.apply(res, arguments);
+  };
+  
+  next();
+});
 
 // CORS configuration
 const corsOptions = {
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD'],
   allowedHeaders: ['Origin', 'Content-Type', 'X-Amz-Date', 'Authorization', 'X-Api-Key', 'X-Amz-Security-Token', 'Accept'],
+  exposedHeaders: ['Access-Control-Allow-Origin'],
   credentials: true,
   maxAge: 86400,
   preflightContinue: true
@@ -25,22 +43,23 @@ const corsOptions = {
 
 // Middleware
 app.use(cors(corsOptions));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Handle OPTIONS requests
 app.options('*', cors(corsOptions));
 
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-
-// Request logging middleware
-app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-  next();
-});
-
-// Health check endpoint
+// Health check endpoint with detailed info
 app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok', environment: process.env.NODE_ENV || 'development' });
+  const healthInfo = {
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development',
+    port: PORT,
+    cors: corsOptions,
+    headers: req.headers
+  };
+  res.status(200).json(healthInfo);
 });
 
 // Test database connection
@@ -53,28 +72,9 @@ pool.query('SELECT NOW()', (err, res) => {
   }
 });
 
-// API Routes with error handling
-app.use('/api/users', (req, res, next) => {
-  userRoutes(req, res, (err) => {
-    if (err) {
-      console.error('Error in user routes:', err);
-      res.status(500).json({ message: 'Internal server error' });
-    } else {
-      next();
-    }
-  });
-});
-
-app.use('/api/ac-listings', (req, res, next) => {
-  acListingRoutes(req, res, (err) => {
-    if (err) {
-      console.error('Error in AC listings routes:', err);
-      res.status(500).json({ message: 'Internal server error' });
-    } else {
-      next();
-    }
-  });
-});
+// API Routes
+app.use('/api/users', userRoutes);
+app.use('/api/ac-listings', acListingRoutes);
 
 // Auth routes
 app.post('/api/auth/login', async (req, res) => {
@@ -176,7 +176,15 @@ app.post('/api/auth/signup', async (req, res) => {
 
 // Global error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error('Error details:', {
+    message: err.message,
+    stack: err.stack,
+    timestamp: new Date().toISOString(),
+    path: req.path,
+    method: req.method,
+    headers: req.headers
+  });
+  
   res.status(500).json({ 
     message: 'Something broke!',
     error: process.env.NODE_ENV === 'development' ? err.message : undefined
@@ -186,4 +194,9 @@ app.use((err, req, res, next) => {
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
+  console.log('Server configuration:', {
+    port: PORT,
+    environment: process.env.NODE_ENV,
+    cors: corsOptions
+  });
 }); 

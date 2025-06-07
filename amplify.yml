@@ -3,6 +3,7 @@ env:
   variables:
     NODE_ENV: production
     PORT: 8080
+    DEBUG: '*'
 backend:
   phases:
     preBuild:
@@ -19,8 +20,9 @@ backend:
         - pm2 start ecosystem.config.cjs --env production
         - sleep 10
         - pm2 list
-        - pm2 logs --nostream --lines 50
+        - pm2 logs --nostream --lines 100
         - curl -v http://localhost:8080/health || pm2 logs --nostream --lines 100
+        - curl -v http://localhost:8080/api/ac-listings || pm2 logs --nostream --lines 100
   artifacts:
     baseDirectory: .
     files:
@@ -33,7 +35,7 @@ backend:
     paths:
       - node_modules/**/*
   customHeaders:
-    - pattern: '**/*'
+    - pattern: '/api/*'
       headers:
         - key: 'Access-Control-Allow-Origin'
           value: '*'
@@ -43,10 +45,12 @@ backend:
           value: 'GET,POST,PUT,DELETE,OPTIONS,HEAD'
         - key: 'Access-Control-Max-Age'
           value: '86400'
+        - key: 'Access-Control-Expose-Headers'
+          value: 'Access-Control-Allow-Origin'
   proxies:
     - path: '/api/*'
       target: 'http://localhost:8080'
-      status: '200'
+      status: '200-399'
 frontend:
   phases:
     preBuild:
