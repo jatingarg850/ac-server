@@ -6,12 +6,19 @@ import jwt from 'jsonwebtoken';
 import { pool } from './db/index.js';
 import userRoutes from './routes/users.js';
 import acListingRoutes from './routes/ac-listings.js';
+import morgan from 'morgan';
+import auth from './middleware/auth.js';
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 8080;
+
+// Enable detailed logging in development
+if (process.env.NODE_ENV !== 'production') {
+  app.use(morgan('dev'));
+}
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -32,13 +39,16 @@ app.use((req, res, next) => {
 
 // CORS configuration
 const corsOptions = {
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'HEAD'],
-  allowedHeaders: ['Origin', 'Content-Type', 'X-Amz-Date', 'Authorization', 'X-Api-Key', 'X-Amz-Security-Token', 'Accept'],
-  exposedHeaders: ['Access-Control-Allow-Origin'],
+  origin: [
+    'https://main.d1whkm3x8y08ei.amplifyapp.com',
+    'https://d1whkm3x8y08ei.cloudfront.net',
+    'http://localhost:3000',
+    'http://localhost:8080'
+  ],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
-  maxAge: 86400,
-  preflightContinue: true
+  maxAge: 86400
 };
 
 // Middleware
@@ -73,8 +83,8 @@ pool.query('SELECT NOW()', (err, res) => {
 });
 
 // API Routes
-app.use('/api/users', userRoutes);
-app.use('/api/ac-listings', acListingRoutes);
+app.use('/api/users', auth, userRoutes);
+app.use('/api/ac-listings', auth, acListingRoutes);
 
 // Auth routes
 app.post('/api/auth/login', async (req, res) => {
@@ -191,6 +201,20 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Debug endpoint to check environment
+app.get('/debug', (req, res) => {
+  res.json({
+    env: process.env.NODE_ENV,
+    port: process.env.PORT,
+    nodeVersion: process.version,
+    platform: process.platform,
+    uptime: process.uptime(),
+    memoryUsage: process.memoryUsage(),
+    cwd: process.cwd(),
+    headers: req.headers
+  });
+});
+
 // Start server
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server is running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
@@ -199,4 +223,9 @@ app.listen(PORT, '0.0.0.0', () => {
     environment: process.env.NODE_ENV,
     cors: corsOptions
   });
+  console.log('Available routes:');
+  console.log('- GET /health');
+  console.log('- GET /debug');
+  console.log('- GET /api/ac-listings');
+  console.log('- GET /api/users');
 }); 

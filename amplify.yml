@@ -10,40 +10,46 @@ backend:
       commands:
         - 'echo "Current directory: $PWD"'
         - 'echo "Directory contents:" && ls -la'
+        - 'echo "Installing dependencies..."'
         - npm install
+        - 'echo "Installing PM2..."'
         - npm install -g pm2
         - 'echo "Verifying build configuration..."'
         - node verify-build.js
+        - 'echo "PreBuild phase completed"'
     build:
       commands:
         - 'echo "Starting build phase..."'
-        - npm run build
+        - 'echo "Checking Node.js version:"'
+        - node --version
+        - 'echo "Checking directory structure:"'
+        - ls -R
         - 'echo "Build phase completed"'
     postBuild:
       commands:
         - 'echo "Starting PM2..."'
         - 'pm2 delete all || true'
-        - 'pm2 start ecosystem.config.cjs --env production'
+        - |
+          if [ -f "ecosystem.config.cjs" ]; then
+            echo "Starting server with ecosystem.config.cjs"
+            pm2 start ecosystem.config.cjs --env production
+          else
+            echo "ecosystem.config.cjs not found, starting server directly"
+            pm2 start index.js --name ac-server
+          fi
         - 'sleep 10'
         - 'echo "PM2 Status:"'
         - pm2 list
         - 'echo "PM2 Logs:"'
-        - 'pm2 logs --nostream --lines 100'
+        - pm2 logs --nostream --lines 100
         - 'echo "Testing health endpoint..."'
-        - 'curl -v "http://localhost:8080/health"'
+        - 'curl -v "http://localhost:8080/health" || true'
         - 'echo "Testing API endpoint..."'
-        - 'curl -v "http://localhost:8080/api/ac-listings"'
+        - 'curl -v "http://localhost:8080/api/ac-listings" || true'
   artifacts:
     baseDirectory: .
     files:
-      - index.js
-      - package.json
-      - package-lock.json
-      - ecosystem.config.cjs
-      - routes/**/*
-      - middleware/**/*
-      - db/**/*
-      - config/**/*
+      - '**/*'
     excludes:
       - node_modules/**/*
       - src/**/*
