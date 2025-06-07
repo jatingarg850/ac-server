@@ -6,7 +6,7 @@ backend:
   phases:
     preBuild:
       commands:
-        - npm ci
+        - npm install
         - node verify-build.js
     build:
       commands:
