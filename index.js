@@ -13,12 +13,11 @@ import auth from './middleware/auth.js';
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 8080;
+const port = process.env.PORT || 8080;
+const host = process.env.HOST || '0.0.0.0';
 
-// Enable detailed logging in development
-if (process.env.NODE_ENV !== 'production') {
-  app.use(morgan('dev'));
-}
+// Enable detailed logging
+app.use(morgan('combined'));
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -37,11 +36,12 @@ app.use((req, res, next) => {
   next();
 });
 
-// CORS configuration
+// Configure CORS
 const corsOptions = {
   origin: [
-    'https://main.d1whkm3x8y08ei.amplifyapp.com',
-    'https://d1whkm3x8y08ei.cloudfront.net',
+    'https://main.d2y8shqm3cc5e3.amplifyapp.com',
+    'https://d2y8shqm3cc5e3.amplifyapp.com',
+    'https://d2y8shqm3cc5e3.cloudfront.net',
     'http://localhost:3000',
     'http://localhost:8080'
   ],
@@ -51,25 +51,67 @@ const corsOptions = {
   maxAge: 86400
 };
 
-// Middleware
 app.use(cors(corsOptions));
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.json());
 
-// Handle OPTIONS requests
-app.options('*', cors(corsOptions));
-
-// Health check endpoint with detailed info
+// Basic health check endpoint
 app.get('/health', (req, res) => {
-  const healthInfo = {
-    status: 'ok',
+  res.json({ 
+    status: 'ok', 
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development',
-    port: PORT,
-    cors: corsOptions,
-    headers: req.headers
-  };
-  res.status(200).json(healthInfo);
+    env: process.env.NODE_ENV,
+    host: host,
+    port: port,
+    pid: process.pid
+  });
+});
+
+// Debug endpoint
+app.get('/debug', (req, res) => {
+  res.json({
+    env: process.env.NODE_ENV,
+    port: process.env.PORT,
+    host: process.env.HOST,
+    nodeVersion: process.version,
+    platform: process.platform,
+    uptime: process.uptime(),
+    memoryUsage: process.memoryUsage(),
+    cwd: process.cwd(),
+    pid: process.pid,
+    headers: req.headers,
+    corsOptions: corsOptions
+  });
+});
+
+// Test endpoint
+app.get('/api/ac-listings', (req, res) => {
+  res.json({
+    message: 'AC listings API is working',
+    timestamp: new Date().toISOString(),
+    data: []
+  });
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  res.status(err.status || 500).json({
+    error: {
+      message: err.message || 'Internal Server Error',
+      status: err.status || 500
+    }
+  });
+});
+
+// Handle 404s
+app.use((req, res) => {
+  res.status(404).json({
+    error: {
+      message: 'Not Found',
+      status: 404,
+      path: req.path
+    }
+  });
 });
 
 // Test database connection
@@ -184,48 +226,51 @@ app.post('/api/auth/signup', async (req, res) => {
   }
 });
 
-// Global error handling middleware
-app.use((err, req, res, next) => {
-  console.error('Error details:', {
-    message: err.message,
-    stack: err.stack,
-    timestamp: new Date().toISOString(),
-    path: req.path,
-    method: req.method,
-    headers: req.headers
-  });
+// Create server with error handling
+const server = app.listen(port, host, (err) => {
+  if (err) {
+    console.error('Failed to start server:', err);
+    process.exit(1);
+  }
   
-  res.status(500).json({ 
-    message: 'Something broke!',
-    error: process.env.NODE_ENV === 'development' ? err.message : undefined
-  });
-});
-
-// Debug endpoint to check environment
-app.get('/debug', (req, res) => {
-  res.json({
-    env: process.env.NODE_ENV,
-    port: process.env.PORT,
-    nodeVersion: process.version,
-    platform: process.platform,
-    uptime: process.uptime(),
-    memoryUsage: process.memoryUsage(),
-    cwd: process.cwd(),
-    headers: req.headers
-  });
-});
-
-// Start server
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server is running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
-  console.log('Server configuration:', {
-    port: PORT,
-    environment: process.env.NODE_ENV,
-    cors: corsOptions
-  });
+  console.log(`Server running at http://${host}:${port} in ${process.env.NODE_ENV || 'development'} mode`);
   console.log('Available routes:');
-  console.log('- GET /health');
-  console.log('- GET /debug');
-  console.log('- GET /api/ac-listings');
-  console.log('- GET /api/users');
+  console.log(`- GET http://${host}:${port}/health`);
+  console.log(`- GET http://${host}:${port}/debug`);
+  console.log(`- GET http://${host}:${port}/api/ac-listings`);
+
+  // Signal to PM2 that the app is ready
+  if (process.send) {
+    process.send('ready');
+  }
+});
+
+// Graceful shutdown
+const shutdown = (signal) => {
+  console.log(`${signal} received. Shutting down gracefully...`);
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+
+  // Force shutdown after 10 seconds
+  setTimeout(() => {
+    console.error('Could not close connections in time, forcefully shutting down');
+    process.exit(1);
+  }, 10000);
+};
+
+// Handle process signals
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+
+// Handle uncaught errors
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+  shutdown('UNCAUGHT_EXCEPTION');
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+  shutdown('UNHANDLED_REJECTION');
 }); 
