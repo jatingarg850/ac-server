@@ -6,13 +6,8 @@ dotenv.config();
 
 const { Pool } = pg;
 
-const isProduction = process.env.NODE_ENV === 'production';
-
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_Ybrl6uhX2LVc@ep-muddy-sun-a841goek-pooler.eastus2.azure.neon.tech/neondb?sslmode=require',
-  ssl: {
-    rejectUnauthorized: false
-  }
+  connectionString: 'postgresql://neondb_owner:npg_Ybrl6uhX2LVc@ep-muddy-sun-a841goek-pooler.eastus2.azure.neon.tech/neondb?sslmode=require'
 });
 
 const setup = async () => {
@@ -22,11 +17,12 @@ const setup = async () => {
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         username VARCHAR(255) NOT NULL,
-        email VARCHAR(255) UNIQUE NOT NULL,
+        email VARCHAR(255) NOT NULL,
         password VARCHAR(255) NOT NULL,
         is_admin BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT users_email_unique UNIQUE (email)
       );
 
       CREATE TABLE IF NOT EXISTS user_profiles (
@@ -92,12 +88,19 @@ const setup = async () => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash('Admin123!', salt);
 
-    await pool.query(`
-      INSERT INTO users (username, email, password, is_admin)
-      VALUES ($1, $2, $3, $4)
-      ON CONFLICT (email) DO NOTHING
-      RETURNING id;
-    `, ['admin', 'admin@acwallah.com', hashedPassword, true]);
+    // Check if admin user exists
+    const adminExists = await pool.query(
+      'SELECT id FROM users WHERE email = $1',
+      ['admin@acwallah.com']
+    );
+
+    if (adminExists.rows.length === 0) {
+      await pool.query(`
+        INSERT INTO users (username, email, password, is_admin)
+        VALUES ($1, $2, $3, $4)
+        RETURNING id;
+      `, ['admin', 'admin@acwallah.com', hashedPassword, true]);
+    }
 
     console.log('Database setup completed successfully');
     process.exit(0);

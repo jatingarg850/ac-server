@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import fs from 'fs';
+import fs from 'fs/promises';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -17,20 +17,30 @@ const requiredFiles = [
 ];
 
 console.log('Verifying build configuration...');
+console.log('Current directory:', __dirname);
 
-let allFilesExist = true;
-for (const file of requiredFiles) {
-  const filePath = join(__dirname, file);
-  if (!fs.existsSync(filePath)) {
-    console.error(`Missing required file: ${file}`);
-    allFilesExist = false;
+try {
+  let allFilesExist = true;
+  for (const file of requiredFiles) {
+    const filePath = join(__dirname, file);
+    try {
+      await fs.access(filePath);
+      console.log(`✓ Found: ${file}`);
+    } catch (err) {
+      console.error(`✗ Missing required file: ${file}`);
+      console.error(`  Tried path: ${filePath}`);
+      allFilesExist = false;
+    }
   }
-}
 
-if (allFilesExist) {
-  console.log('All required files are present.');
-  process.exit(0);
-} else {
-  console.error('Build verification failed: Missing required files');
+  if (allFilesExist) {
+    console.log('✓ All required files are present.');
+    process.exit(0);
+  } else {
+    console.error('✗ Build verification failed: Missing required files');
+    process.exit(1);
+  }
+} catch (err) {
+  console.error('✗ Build verification failed with error:', err);
   process.exit(1);
 } 

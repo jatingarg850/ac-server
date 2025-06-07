@@ -5,16 +5,21 @@ dotenv.config();
 
 const { Pool } = pg;
 
-if (!process.env.DATABASE_URL) {
-  console.error('DATABASE_URL environment variable is required');
-  process.exit(1);
-}
+const isProduction = process.env.NODE_ENV === 'production';
+
+const connectionString = isProduction
+  ? process.env.DATABASE_URL
+  : 'postgresql://neondb_owner:npg_Ybrl6uhX2LVc@ep-muddy-sun-a841goek-pooler.eastus2.azure.neon.tech/neondb?sslmode=require';
 
 export const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString,
   ssl: {
     rejectUnauthorized: false
   }
+});
+
+pool.on('connect', () => {
+  console.log('Database connected successfully');
 });
 
 pool.on('error', (err) => {

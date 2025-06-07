@@ -6,54 +6,37 @@ import jwt from 'jsonwebtoken';
 import { pool } from './db/index.js';
 import userRoutes from './routes/users.js';
 import acListingRoutes from './routes/ac-listings.js';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
-// Load environment variables
 dotenv.config();
-
-// Get production config
-const isProduction = process.env.NODE_ENV === 'production';
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// CORS configuration
+// Middleware
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
   'https://main.d1tkkow9h155jh.amplifyapp.com',
   process.env.FRONTEND_URL
-].filter(Boolean);
+];
 
-const corsOptions = {
+app.use(cors({
   origin: function(origin, callback) {
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     if (allowedOrigins.indexOf(origin) === -1) {
-      console.log('Blocked origin:', origin);
+      console.log('Blocked origin:', origin); // Add logging for debugging
       const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
       return callback(new Error(msg), false);
     }
-    console.log('Allowed origin:', origin);
+    console.log('Allowed origin:', origin); // Add logging for debugging
     return callback(null, true);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
-};
-
-// Middleware
-app.use(cors(corsOptions));
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok' });
-});
+}));
+app.use(express.json());
 
 // Test database connection
 pool.query('SELECT NOW()', (err, res) => {
@@ -65,38 +48,21 @@ pool.query('SELECT NOW()', (err, res) => {
   }
 });
 
-// API Routes with error handling
-app.use('/api/users', (req, res, next) => {
-  userRoutes(req, res, (err) => {
-    if (err) {
-      console.error('Error in user routes:', err);
-      res.status(500).json({ message: 'Internal server error' });
-    } else {
-      next();
-    }
-  });
-});
-
-app.use('/api/ac-listings', (req, res, next) => {
-  acListingRoutes(req, res, (err) => {
-    if (err) {
-      console.error('Error in AC listings routes:', err);
-      res.status(500).json({ message: 'Internal server error' });
-    } else {
-      next();
-    }
-  });
-});
+// Routes
+app.use('/api/users', userRoutes);
+app.use('/api/ac-listings', acListingRoutes);
 
 // Auth routes
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    // Input validation
     if (!email || !password) {
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
+    // Check if user exists
     const userResult = await pool.query(
       'SELECT * FROM users WHERE email = $1',
       [email]
@@ -107,16 +73,18 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     const user = userResult.rows[0];
+
+    // Check if password is correct
     const isValidPassword = await bcrypt.compare(password, user.password);
-    
     if (!isValidPassword) {
       return res.status(400).json({ message: 'Invalid credentials' });
     }
 
+    // Create JWT token
     const token = jwt.sign(
       { id: user.id, isAdmin: user.is_admin },
       process.env.JWT_SECRET || 'your_jwt_secret_key_here',
-      { expiresIn: '24h' }
+      { expiresIn: '1h' }
     );
 
     res.json({
@@ -160,13 +128,13 @@ app.post('/api/auth/signup', async (req, res) => {
 
     // Create user
     const newUser = await pool.query(
-      'INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING *',
+      'INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING id, username, email, is_admin',
       [username, email, hashedPassword]
     );
 
     // Create JWT token
     const token = jwt.sign(
-      { id: newUser.rows[0].id, isAdmin: newUser.rows[0].is_admin },
+      { id: newUser.rows[0].id, isAdmin: false },
       process.env.JWT_SECRET || 'your_jwt_secret_key_here',
       { expiresIn: '1h' }
     );
@@ -177,7 +145,7 @@ app.post('/api/auth/signup', async (req, res) => {
         id: newUser.rows[0].id,
         username: newUser.rows[0].username,
         email: newUser.rows[0].email,
-        is_admin: newUser.rows[0].is_admin
+        is_admin: false
       }
     });
   } catch (error) {
@@ -192,24 +160,7 @@ app.use((err, req, res, next) => {
   res.status(500).json({ message: 'Something broke!' });
 });
 
-// Serve static files in production
-if (isProduction) {
-  app.use(express.static(path.join(__dirname, '../dist')));
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../dist/index.html'));
-  });
-}
-
-// Global error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ 
-    message: 'Something broke!',
-    error: process.env.NODE_ENV === 'development' ? err.message : undefined
-  });
-});
-
 // Start server
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server is running on port ${PORT} in ${process.env.NODE_ENV || 'development'} mode`);
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
 }); 

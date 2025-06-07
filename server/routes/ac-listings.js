@@ -7,7 +7,6 @@ const router = express.Router();
 // Create new AC listing
 router.post('/', auth, async (req, res) => {
   try {
-<<<<<<< HEAD
     const { 
       title, 
       description, 
@@ -18,18 +17,6 @@ router.post('/', auth, async (req, res) => {
       no_of_ac, 
       price, 
       photos 
-=======
-    const {
-      title,
-      description,
-      brand,
-      manufacturing_year,
-      ac_type,
-      dimensions,
-      no_of_ac,
-      price,
-      photos
->>>>>>> 92eb4d58c4623ffbe2a4b65ada7ebab150a08de2
     } = req.body;
 
     // Validate required fields
@@ -48,14 +35,8 @@ router.post('/', auth, async (req, res) => {
         dimensions,
         no_of_ac,
         price,
-<<<<<<< HEAD
         photos
       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-=======
-        photos,
-        created_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
->>>>>>> 92eb4d58c4623ffbe2a4b65ada7ebab150a08de2
       RETURNING *`,
       [
         req.user.id,
@@ -67,21 +48,13 @@ router.post('/', auth, async (req, res) => {
         dimensions,
         no_of_ac,
         price,
-<<<<<<< HEAD
         photos
-=======
-        photos || []
->>>>>>> 92eb4d58c4623ffbe2a4b65ada7ebab150a08de2
       ]
     );
 
     res.status(201).json(result.rows[0]);
   } catch (err) {
-<<<<<<< HEAD
     console.error(err);
-=======
-    console.error('Error creating AC listing:', err);
->>>>>>> 92eb4d58c4623ffbe2a4b65ada7ebab150a08de2
     res.status(500).json({ message: 'Server error' });
   }
 });
