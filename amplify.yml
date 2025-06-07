@@ -55,21 +55,40 @@ backend:
     paths:
       - node_modules/**/*
   customHeaders:
+    - pattern: '**/*'
+      headers:
+        - key: 'Cache-Control'
+          value: 'no-store'
+        - key: 'Access-Control-Allow-Origin'
+          value: '*'
+        - key: 'Access-Control-Allow-Headers'
+          value: 'Origin, X-Requested-With, Content-Type, Accept, Authorization'
+        - key: 'Access-Control-Allow-Methods'
+          value: 'GET, POST, PUT, DELETE, OPTIONS'
     - pattern: '/api/*'
       headers:
         - key: 'Access-Control-Allow-Origin'
           value: '*'
         - key: 'Access-Control-Allow-Headers'
-          value: 'Origin,Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,Accept'
+          value: 'Origin, X-Requested-With, Content-Type, Accept, Authorization'
         - key: 'Access-Control-Allow-Methods'
-          value: 'GET,POST,PUT,DELETE,OPTIONS,HEAD'
+          value: 'GET, POST, PUT, DELETE, OPTIONS'
         - key: 'Access-Control-Max-Age'
           value: '86400'
-        - key: 'Access-Control-Expose-Headers'
-          value: 'Access-Control-Allow-Origin'
+  rewrites:
+    - source: '/api/:path*'
+      target: '/api/:path*'
+      status: '200'
+    - source: '/<*>'
+      target: '/index.html'
+      status: '200'
+  redirects:
+    - source: '/api'
+      target: '/api/'
+      status: '301'
   proxies:
     - path: '/api/*'
-      target: 'http://0.0.0.0:8080'
+      target: 'http://localhost:8080'
       status: '200-399'
 frontend:
   phases:

@@ -38,21 +38,35 @@ app.use((req, res, next) => {
 
 // Configure CORS
 const corsOptions = {
-  origin: [
-    'https://main.d2y8shqm3cc5e3.amplifyapp.com',
-    'https://d2y8shqm3cc5e3.amplifyapp.com',
-    'https://d2y8shqm3cc5e3.cloudfront.net',
-    'http://localhost:3000',
-    'http://localhost:8080'
-  ],
+  origin: '*', // Allow all origins
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization'],
   credentials: true,
-  maxAge: 86400
+  maxAge: 86400,
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 };
 
+// Apply CORS middleware
 app.use(cors(corsOptions));
+
+// Handle preflight requests
+app.options('*', cors(corsOptions));
+
+// Parse JSON bodies
 app.use(express.json());
+
+// Add CloudFront headers
+app.use((req, res, next) => {
+  // Add headers to help with CloudFront caching
+  res.set({
+    'Cache-Control': 'no-store',
+    'Pragma': 'no-cache',
+    'Expires': '0',
+    'X-Content-Type-Options': 'nosniff'
+  });
+  next();
+});
 
 // Basic health check endpoint
 app.get('/health', (req, res) => {
@@ -62,7 +76,8 @@ app.get('/health', (req, res) => {
     env: process.env.NODE_ENV,
     host: host,
     port: port,
-    pid: process.pid
+    pid: process.pid,
+    headers: req.headers // Include request headers for debugging
   });
 });
 
@@ -79,7 +94,12 @@ app.get('/debug', (req, res) => {
     cwd: process.cwd(),
     pid: process.pid,
     headers: req.headers,
-    corsOptions: corsOptions
+    corsOptions: corsOptions,
+    cloudfront: {
+      distributionId: req.headers['x-amz-cf-id'],
+      requestId: req.headers['x-request-id'],
+      viewerCountry: req.headers['cloudfront-viewer-country']
+    }
   });
 });
 
@@ -88,7 +108,17 @@ app.get('/api/ac-listings', (req, res) => {
   res.json({
     message: 'AC listings API is working',
     timestamp: new Date().toISOString(),
+    requestHeaders: req.headers,
     data: []
+  });
+});
+
+// Root endpoint for CloudFront health checks
+app.get('/', (req, res) => {
+  res.json({
+    status: 'ok',
+    message: 'Server is running',
+    timestamp: new Date().toISOString()
   });
 });
 
@@ -98,18 +128,21 @@ app.use((err, req, res, next) => {
   res.status(err.status || 500).json({
     error: {
       message: err.message || 'Internal Server Error',
-      status: err.status || 500
+      status: err.status || 500,
+      timestamp: new Date().toISOString()
     }
   });
 });
 
 // Handle 404s
 app.use((req, res) => {
+  console.log('404 Not Found:', req.method, req.path, req.headers);
   res.status(404).json({
     error: {
       message: 'Not Found',
       status: 404,
-      path: req.path
+      path: req.path,
+      timestamp: new Date().toISOString()
     }
   });
 });
