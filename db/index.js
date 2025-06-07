@@ -7,9 +7,12 @@ const { Pool } = pg;
 
 const isProduction = process.env.NODE_ENV === 'production';
 
-const connectionString = isProduction
-  ? process.env.DATABASE_URL
-  : 'postgresql://neondb_owner:npg_Ybrl6uhX2LVc@ep-muddy-sun-a841goek-pooler.eastus2.azure.neon.tech/neondb?sslmode=require';
+const connectionString = process.env.DATABASE_URL;
+
+if (!connectionString) {
+  console.error('DATABASE_URL environment variable is required');
+  process.exit(1);
+}
 
 export const pool = new Pool({
   connectionString,
