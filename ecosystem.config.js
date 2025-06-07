@@ -9,7 +9,7 @@ export default {
     max_memory_restart: '1G',
     env_production: {
       NODE_ENV: 'production',
-      PORT: 5000
+      PORT: 8080
     }
   }]
 }; 

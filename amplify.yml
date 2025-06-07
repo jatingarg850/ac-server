@@ -2,18 +2,22 @@ version: 1
 env:
   variables:
     NODE_ENV: production
+    PORT: 8080
 backend:
   phases:
     preBuild:
       commands:
         - npm install
+        - npm install -g pm2
         - node verify-build.js
     build:
       commands:
         - npm run build
     postBuild:
       commands:
-        - npm prune --production
+        - pm2 start ecosystem.config.js --env production
+        - sleep 5
+        - curl http://localhost:8080/health || exit 1
   artifacts:
     baseDirectory: .
     files:
