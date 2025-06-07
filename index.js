@@ -24,6 +24,7 @@ const corsOptions = {
     // In production, check against allowed origins
     const allowedOrigins = [
       process.env.FRONTEND_URL,
+      'https://main.d1whkm3x8y08ei.amplifyapp.com',
       'https://main.d1tkkow9h155jh.amplifyapp.com'
     ].filter(Boolean);
 
@@ -42,6 +43,12 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  next();
+});
 
 // Health check endpoint
 app.get('/health', (req, res) => {

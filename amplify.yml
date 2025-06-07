@@ -39,6 +39,20 @@ backend:
   cache:
     paths:
       - node_modules/**/*
+  customHeaders:
+    - pattern: '**/*'
+      headers:
+        - key: 'X-Frame-Options'
+          value: 'SAMEORIGIN'
+        - key: 'X-XSS-Protection'
+          value: '1; mode=block'
+  rewrites:
+    - source: '/api/:path*'
+      target: 'http://localhost:8080/api/:path*'
+      status: '200'
+    - source: '/<*>'
+      target: '/index.html'
+      status: '200'
 frontend:
   phases:
     preBuild:
