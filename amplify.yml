@@ -16,7 +16,7 @@ backend:
     postBuild:
       commands:
         - pm2 delete all || true
-        - pm2 start ecosystem.config.js --env production
+        - pm2 start ecosystem.config.cjs --env production
         - sleep 10
         - pm2 list
         - pm2 logs --nostream --lines 50
@@ -26,7 +26,7 @@ backend:
     files:
       - package.json
       - package-lock.json
-      - ecosystem.config.js
+      - ecosystem.config.cjs
       - index.js
       - routes/**/*
       - middleware/**/*
